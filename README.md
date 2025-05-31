@@ -24,7 +24,7 @@ MiniBankGo is a robust banking API service built with Go (Golang) that provides 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/minibank-go.git
+git clone https://github.com/shariaralphabyte/minibank-go.git
 cd minibank-go
 ```
 
