@@ -60,15 +60,12 @@ func AdminAuth(next http.Handler) http.Handler {
         log.Printf("Admin check for user %d (%s): is_admin = %v", claims.UserID, claims.Email, claims.IsAdmin)
 
         if !claims.IsAdmin {
-            log.Printf("User %d (%s) attempted to access admin endpoint %s without admin privileges", 
-                claims.UserID, claims.Email, r.URL.Path)
+            log.Printf("User %d attempted to access admin endpoint %s without admin privileges", 
+                claims.UserID, r.URL.Path)
             w.Header().Set("Content-Type", "application/json")
             w.WriteHeader(http.StatusForbidden)
-            json.NewEncoder(w).Encode(map[string]interface{}{
+            json.NewEncoder(w).Encode(map[string]string{
                 "error": "Admin access required",
-                "user_id": claims.UserID,
-                "email": claims.Email,
-                "is_admin": claims.IsAdmin,
                 "message": "This endpoint requires admin privileges",
             })
             return

@@ -27,13 +27,18 @@ type Transaction struct {
     DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-type TransactionRequest struct {
+type DepositRequest struct {
+    Amount      float64 `json:"amount" validate:"required,min=1"`
+    Description string  `json:"description"`
+}
+
+type WithdrawRequest struct {
     Amount      float64 `json:"amount" validate:"required,min=1"`
     Description string  `json:"description"`
 }
 
 type TransferRequest struct {
-    ToUserEmail string  `json:"to_user_email" validate:"required,email"`
+    ToUserID    uint    `json:"to_user_id" validate:"required,gt=0"`
     Amount      float64 `json:"amount" validate:"required,min=1"`
     Description string  `json:"description"`
 }

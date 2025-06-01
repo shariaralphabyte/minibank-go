@@ -8,7 +8,7 @@ import (
 
     "minibank-go/middleware"
     "minibank-go/models"
-
+    "minibank-go/utils"
 )
 
 func (h *Handlers) GetPendingKYC(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +16,7 @@ func (h *Handlers) GetPendingKYC(w http.ResponseWriter, r *http.Request) {
     if err := h.db.Where("status = ?", "pending").
         Preload("User").
         Find(&kycRecords).Error; err != nil {
-        http.Error(w, "Failed to fetch pending KYC records", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Failed to fetch pending KYC records", err.Error())
         return
     }
 
@@ -27,13 +27,19 @@ func (h *Handlers) GetPendingKYC(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) VerifyKYC(w http.ResponseWriter, r *http.Request) {
     claims := middleware.GetUserFromContext(r)
     if claims == nil {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        sendError(w, http.StatusUnauthorized, "Invalid or missing token", nil)
         return
     }
 
     var req models.KYCVerificationRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        sendError(w, http.StatusBadRequest, "Invalid request body", err.Error())
+        return
+    }
+
+    if err := utils.ValidateStruct(req); err != nil {
+        errors := utils.FormatValidationError(err)
+        sendError(w, http.StatusBadRequest, "Validation failed", errors)
         return
     }
 
@@ -44,6 +50,20 @@ func (h *Handlers) VerifyKYC(w http.ResponseWriter, r *http.Request) {
             tx.Rollback()
         }
     }()
+
+    // Validate KYC status
+    if req.Status != "verified" && req.Status != "rejected" {
+        tx.Rollback()
+        sendError(w, http.StatusBadRequest, "Invalid KYC status", "Status must be either 'verified' or 'rejected'")
+        return
+    }
+
+    // Validate rejection reason for rejected status
+    if req.Status == "rejected" && req.RejectionReason == "" {
+        tx.Rollback()
+        sendError(w, http.StatusBadRequest, "Rejection reason is required", "Please provide a reason for rejection")
+        return
+    }
 
     // Update KYC record
     now := time.Now()
@@ -59,7 +79,7 @@ func (h *Handlers) VerifyKYC(w http.ResponseWriter, r *http.Request) {
 
     if err := tx.Model(&models.KYC{}).Where("id = ?", req.KYCID).Updates(updateData).Error; err != nil {
         tx.Rollback()
-        http.Error(w, "Failed to update KYC record", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Failed to update KYC record", err.Error())
         return
     }
 
@@ -67,18 +87,18 @@ func (h *Handlers) VerifyKYC(w http.ResponseWriter, r *http.Request) {
     var kyc models.KYC
     if err := tx.First(&kyc, req.KYCID).Error; err != nil {
         tx.Rollback()
-        http.Error(w, "KYC record not found", http.StatusNotFound)
+        sendError(w, http.StatusNotFound, "KYC record not found", err.Error())
         return
     }
 
     if err := tx.Model(&models.User{}).Where("id = ?", kyc.UserID).Update("kyc_status", req.Status).Error; err != nil {
         tx.Rollback()
-        http.Error(w, "Failed to update user KYC status", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Failed to update user KYC status", err.Error())
         return
     }
 
     if err := tx.Commit().Error; err != nil {
-        http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Failed to commit transaction", err.Error())
         return
     }
 
@@ -86,8 +106,11 @@ func (h *Handlers) VerifyKYC(w http.ResponseWriter, r *http.Request) {
         "KYC verification: "+req.Status, r.RemoteAddr, r.UserAgent())
 
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]string{
+    json.NewEncoder(w).Encode(map[string]interface{}{
         "message": "KYC verification updated successfully",
+        "status":  req.Status,
+        "kyc_id":  req.KYCID,
+        "user_id": kyc.UserID,
     })
 }
 
@@ -102,18 +125,29 @@ func (h *Handlers) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
     }
     offset := (page - 1) * limit
 
+    var total int64
+    if err := h.db.Model(&models.AuditLog{}).Count(&total).Error; err != nil {
+        sendError(w, http.StatusInternalServerError, "Failed to fetch audit logs", err.Error())
+        return
+    }
+
     var auditLogs []models.AuditLog
     if err := h.db.Preload("User").
         Order("created_at DESC").
         Limit(limit).
         Offset(offset).
         Find(&auditLogs).Error; err != nil {
-        http.Error(w, "Failed to fetch audit logs", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Failed to fetch audit logs", err.Error())
         return
     }
 
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(auditLogs)
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "audit_logs": auditLogs,
+        "page":       page,
+        "limit":      limit,
+        "total":      total,
+    })
 }
 
 func (h *Handlers) GetAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -127,16 +161,27 @@ func (h *Handlers) GetAllUsers(w http.ResponseWriter, r *http.Request) {
     }
     offset := (page - 1) * limit
 
+    var total int64
+    if err := h.db.Model(&models.User{}).Count(&total).Error; err != nil {
+        sendError(w, http.StatusInternalServerError, "Failed to fetch users", err.Error())
+        return
+    }
+
     var users []models.User
     if err := h.db.Select("id, email, phone, first_name, last_name, balance, is_active, kyc_status, created_at, updated_at").
         Order("created_at DESC").
         Limit(limit).
         Offset(offset).
         Find(&users).Error; err != nil {
-        http.Error(w, "Failed to fetch users", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Failed to fetch users", err.Error())
         return
     }
 
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(users)
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "users": users,
+        "page":  page,
+        "limit": limit,
+        "total": total,
+    })
 }

@@ -17,6 +17,7 @@ type User struct {
     IsActive    bool           `json:"is_active" gorm:"default:true"`
     IsAdmin     bool           `json:"is_admin" gorm:"default:false"`
     KYCStatus   string         `json:"kyc_status" gorm:"default:pending"` // pending, verified, rejected
+    Verified    bool           `json:"verified" gorm:"default:false"`
     CreatedAt   time.Time      `json:"created_at"`
     UpdatedAt   time.Time      `json:"updated_at"`
     DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`

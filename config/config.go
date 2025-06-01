@@ -5,6 +5,17 @@ import (
     "os"
 )
 
+type TransactionLimits struct {
+    DailyDepositLimit  float64
+    DailyWithdrawLimit float64
+    DailyTransferLimit float64
+}
+
+type AMLRules struct {
+    MonthlyThreshold         float64
+    DailyTransactionLimit   int
+}
+
 type Config struct {
     DatabaseURL        string
     JWTSecret          string
@@ -12,6 +23,8 @@ type Config struct {
     AdminCode          string
     Port               string
     Environment        string
+    TransactionLimits  TransactionLimits
+    AMLRules           AMLRules
     MaxTransferAmount  float64
     DailyTransferLimit float64
 }
@@ -24,6 +37,15 @@ func Load() *Config {
         AdminCode:          getEnv("ADMIN_CODE", "MINIBANK_ADMIN_2025"),
         Port:               getEnv("PORT", "8080"),
         Environment:        getEnv("ENVIRONMENT", "development"),
+        TransactionLimits: TransactionLimits{
+            DailyDepositLimit:  10000.0,
+            DailyWithdrawLimit: 5000.0,
+            DailyTransferLimit: 50000.0,
+        },
+        AMLRules: AMLRules{
+            MonthlyThreshold:        100000.0,
+            DailyTransactionLimit:   10,
+        },
         MaxTransferAmount:  10000.0,
         DailyTransferLimit: 50000.0,
     }
