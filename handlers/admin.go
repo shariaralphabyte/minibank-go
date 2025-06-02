@@ -151,37 +151,57 @@ func (h *Handlers) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-    page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-    if page <= 0 {
-        page = 1
-    }
-    limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-    if limit <= 0 || limit > 100 {
-        limit = 20
-    }
-    offset := (page - 1) * limit
+	emailQuery := r.URL.Query().Get("email")
 
-    var total int64
-    if err := h.db.Model(&models.User{}).Count(&total).Error; err != nil {
-        sendError(w, http.StatusInternalServerError, "Failed to fetch users", err.Error())
-        return
-    }
+	if emailQuery != "" {
+		var user models.User
+		if err := h.db.Where("email = ?", emailQuery).First(&user).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				sendError(w, http.StatusNotFound, "User not found with specified email", nil)
+			} else {
+				sendError(w, http.StatusInternalServerError, "Database error fetching user by email", map[string]string{"original_error": err.Error()})
+			}
+			return
+		}
+		user.Password = "" // Clear password
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"user": user})
+		return
+	}
 
-    var users []models.User
-    if err := h.db.Select("id, email, phone, first_name, last_name, balance, is_active, kyc_status, created_at, updated_at").
-        Order("created_at DESC").
-        Limit(limit).
-        Offset(offset).
-        Find(&users).Error; err != nil {
-        sendError(w, http.StatusInternalServerError, "Failed to fetch users", err.Error())
-        return
-    }
+	// Existing pagination logic if no email query parameter is provided
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page <= 0 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
 
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]interface{}{
-        "users": users,
-        "page":  page,
-        "limit": limit,
-        "total": total,
-    })
+	var total int64
+	if err := h.db.Model(&models.User{}).Count(&total).Error; err != nil {
+		sendError(w, http.StatusInternalServerError, "Failed to count users", err.Error())
+		return
+	}
+
+	var users []models.User
+	// The Select statement already omits the password, which is good.
+	if err := h.db.Select("id, email, phone, first_name, last_name, balance, is_active, kyc_status, created_at, updated_at, is_admin").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&users).Error; err != nil {
+		sendError(w, http.StatusInternalServerError, "Failed to fetch users", err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"users": users,
+		"page":  page,
+		"limit": limit,
+		"total": total,
+	})
 }

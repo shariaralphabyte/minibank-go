@@ -428,7 +428,11 @@ func (h *Handlers) Transfer(w http.ResponseWriter, r *http.Request) {
 
     if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&toUser, req.ToUserID).Error; err != nil {
         tx.Rollback()
-        sendError(w, http.StatusInternalServerError, "Failed to lock recipient record", err.Error())
+        if err == gorm.ErrRecordNotFound {
+            sendError(w, http.StatusNotFound, "Recipient user not found", map[string]string{"error_detail": err.Error()})
+        } else {
+            sendError(w, http.StatusInternalServerError, "Error fetching recipient user", map[string]string{"error_detail": err.Error()})
+        }
         return
     }
 
