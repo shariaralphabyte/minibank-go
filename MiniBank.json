@@ -270,6 +270,69 @@
 							]
 						}
 					}
+				},
+				{
+					"name": "Withdraw Money",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Withdrawal successful message\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.eql(\"Withdrawal successful\");",
+									"});",
+									"",
+									"pm.test(\"New balance exists\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.new_balance).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Transaction details are correct\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.transaction).to.exist;",
+									"    pm.expect(jsonData.transaction.id).to.exist;",
+									"    pm.expect(jsonData.transaction.amount).to.eql(100);",
+									"    pm.expect(jsonData.transaction.type).to.eql(\"withdraw\");",
+									"    pm.expect(jsonData.transaction.status).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 100,\n    \"description\": \"Regular withdrawal\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/withdraw",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"withdraw"
+							]
+						}
+					}
 				}
 			]
 		},
@@ -721,6 +784,69 @@
 							]
 						}
 					}
+				},
+				{
+					"name": "Withdraw Money",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Withdrawal successful message\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.eql(\"Withdrawal successful\");",
+									"});",
+									"",
+									"pm.test(\"New balance exists\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.new_balance).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Transaction details are correct\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.transaction).to.exist;",
+									"    pm.expect(jsonData.transaction.id).to.exist;",
+									"    pm.expect(jsonData.transaction.amount).to.eql(100);",
+									"    pm.expect(jsonData.transaction.type).to.eql(\"withdraw\");",
+									"    pm.expect(jsonData.transaction.status).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 100,\n    \"description\": \"Regular withdrawal\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/withdraw",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"withdraw"
+							]
+						}
+					}
 				}
 			]
 		},
@@ -749,7 +875,43 @@
 								"pending"
 							]
 						}
-					}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is a JSON array\", function () {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.length > 0) {",
+									"    pm.test(\"First item in array is an object and has correct properties\", function () {",
+									"        var firstItem = jsonData[0];",
+									"        pm.expect(firstItem).to.be.an('object');",
+									"        pm.expect(firstItem).to.have.property('id').and.to.be.a('number');",
+									"        pm.expect(firstItem).to.have.property('user_id').and.to.be.a('number');",
+									"        pm.expect(firstItem).to.have.property('status', 'pending');",
+									"        pm.expect(firstItem).to.have.property('user').and.to.be.an('object');",
+									"    });",
+									"",
+									"    pm.test(\"User object in first item has correct properties\", function () {",
+									"        var userObject = jsonData[0].user;",
+									"        pm.expect(userObject).to.have.property('id').and.to.be.a('number');",
+									"        pm.expect(userObject).to.have.property('email').and.to.be.a('string');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Verify KYC - Approve",
@@ -781,7 +943,40 @@
 								"verify"
 							]
 						}
-					}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response message is correct for approve\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.eql(\"KYC verification updated successfully\");",
+									"});",
+									"",
+									"pm.test(\"Status in response is 'verified'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"verified\");",
+									"});",
+									"",
+									"pm.test(\"kyc_id exists and is a number\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.kyc_id).to.exist.and.to.be.a('number');",
+									"});",
+									"",
+									"pm.test(\"user_id exists and is a number\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.user_id).to.exist.and.to.be.a('number');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Verify KYC - Reject",
@@ -813,7 +1008,40 @@
 								"verify"
 							]
 						}
-					}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response message is correct for reject\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.eql(\"KYC verification updated successfully\");",
+									"});",
+									"",
+									"pm.test(\"Status in response is 'rejected'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"rejected\");",
+									"});",
+									"",
+									"pm.test(\"kyc_id exists and is a number\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.kyc_id).to.exist.and.to.be.a('number');",
+									"});",
+									"",
+									"pm.test(\"user_id exists and is a number\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.user_id).to.exist.and.to.be.a('number');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Audit Logs",
@@ -846,7 +1074,55 @@
 								}
 							]
 						}
-					}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is a JSON object\", function () {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.json()).to.be.an('object');",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test(\"Pagination fields are present and have correct types\", function () {",
+									"    pm.expect(jsonData).to.have.property('audit_logs').and.to.be.an('array');",
+									"    pm.expect(jsonData).to.have.property('page').and.to.be.a('number');",
+									"    pm.expect(jsonData).to.have.property('limit').and.to.be.a('number');",
+									"    pm.expect(jsonData).to.have.property('total').and.to.be.a('number');",
+									"});",
+									"",
+									"if (jsonData.audit_logs && jsonData.audit_logs.length > 0) {",
+									"    pm.test(\"First audit log item has correct structure and types\", function () {",
+									"        var firstLog = jsonData.audit_logs[0];",
+									"        pm.expect(firstLog).to.be.an('object');",
+									"        pm.expect(firstLog).to.have.property('id').and.to.be.a('number');",
+									"        pm.expect(firstLog).to.have.property('action').and.to.be.a('string');",
+									"        pm.expect(firstLog).to.have.property('resource').and.to.be.a('string');",
+									"        pm.expect(firstLog).to.have.property('details').and.to.be.a('string');",
+									"        pm.expect(firstLog).to.have.property('created_at').and.to.be.a('string');",
+									"        // Validate created_at is a valid date string (optional, but good practice)",
+									"        pm.expect(new Date(firstLog.created_at).toString()).to.not.equal('Invalid Date');",
+									"",
+									"        if (firstLog.user_id !== null) {",
+									"            pm.expect(firstLog).to.have.property('user').and.to.be.an('object');",
+									"            var userObject = firstLog.user;",
+									"            pm.expect(userObject).to.have.property('id').and.to.be.a('number');",
+									"            pm.expect(userObject).to.have.property('email').and.to.be.a('string');",
+									"        }",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get All Users",
@@ -879,7 +1155,53 @@
 								}
 							]
 						}
-					}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is a JSON object\", function () {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.json()).to.be.an('object');",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test(\"Pagination fields are present and have correct types\", function () {",
+									"    pm.expect(jsonData).to.have.property('users').and.to.be.an('array');",
+									"    pm.expect(jsonData).to.have.property('page').and.to.be.a('number');",
+									"    pm.expect(jsonData).to.have.property('limit').and.to.be.a('number');",
+									"    pm.expect(jsonData).to.have.property('total').and.to.be.a('number');",
+									"});",
+									"",
+									"if (jsonData.users && jsonData.users.length > 0) {",
+									"    pm.test(\"First user object has correct structure, types, and no password\", function () {",
+									"        var firstUser = jsonData.users[0];",
+									"        pm.expect(firstUser).to.be.an('object');",
+									"        pm.expect(firstUser).to.have.property('id').and.to.be.a('number');",
+									"        pm.expect(firstUser).to.have.property('email').and.to.be.a('string');",
+									"        pm.expect(firstUser).to.have.property('first_name').and.to.be.a('string');",
+									"        pm.expect(firstUser).to.have.property('last_name').and.to.be.a('string');",
+									"        pm.expect(firstUser).to.have.property('balance').and.to.be.a('number');",
+									"        pm.expect(firstUser).to.have.property('is_active').and.to.be.a('boolean');",
+									"        pm.expect(firstUser).to.have.property('kyc_status').and.to.be.a('string');",
+									"        pm.expect(firstUser).to.have.property('created_at').and.to.be.a('string');",
+									"        // Validate created_at is a valid date string",
+									"        pm.expect(new Date(firstUser.created_at).toString()).to.not.equal('Invalid Date');",
+									"        // Ensure password is not present",
+									"        pm.expect(firstUser).to.not.have.property('password');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
@@ -1032,7 +1354,26 @@
 								"withdraw"
 							]
 						}
-					}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message indicates insufficient funds\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.exist;",
+									"    pm.expect(jsonData.error).to.match(/insufficient balance/i);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Test Daily Limit",
@@ -1063,7 +1404,26 @@
 								"withdraw"
 							]
 						}
-					}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message indicates daily limit exceeded\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.exist;",
+									"    pm.expect(jsonData.error).to.match(/daily withdrawal limit/i);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Test AML - Rapid Small Transfers",
