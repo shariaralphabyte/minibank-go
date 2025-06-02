@@ -1185,6 +1185,7 @@
 									"        pm.expect(firstUser).to.be.an('object');",
 									"        pm.expect(firstUser).to.have.property('id').and.to.be.a('number');",
 									"        pm.expect(firstUser).to.have.property('email').and.to.be.a('string');",
+									"        pm.expect(firstUser).to.have.property('is_admin').and.to.be.a('boolean');", // Added is_admin check
 									"        pm.expect(firstUser).to.have.property('first_name').and.to.be.a('string');",
 									"        pm.expect(firstUser).to.have.property('last_name').and.to.be.a('string');",
 									"        pm.expect(firstUser).to.have.property('balance').and.to.be.a('number');",
@@ -1442,6 +1443,56 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"to_user_email\": \"admin@minibank.com\",\n    \"amount\": 500,\n    \"description\": \"Small transfer 1\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/transfer",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"transfer"
+							]
+						}
+					}
+				},
+				{
+					"name": "Transfer Money to Non-Existent User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 404\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test(\"Response has error message for non-existent user\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.exist;",
+									"    pm.expect(jsonData.error).to.eql(\"Recipient user not found\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"to_user_id\": 9999999,\n    \"amount\": 10,\n    \"description\": \"Test transfer to non-existent user\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/transactions/transfer",
