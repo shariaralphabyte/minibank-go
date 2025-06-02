@@ -13,17 +13,17 @@ import (
 func (h *Handlers) GetProfile(w http.ResponseWriter, r *http.Request) {
     claims := middleware.GetUserFromContext(r)
     if claims == nil {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        sendError(w, http.StatusUnauthorized, "Unauthorized", nil)
         return
     }
 
     var user models.User
     if err := h.db.First(&user, claims.UserID).Error; err != nil {
         if err == gorm.ErrRecordNotFound {
-            http.Error(w, "User not found", http.StatusNotFound)
+            sendError(w, http.StatusNotFound, "User not found", map[string]string{"original_error": err.Error()})
             return
         }
-        http.Error(w, "Database error", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Database error", map[string]string{"original_error": err.Error()})
         return
     }
 
@@ -35,7 +35,7 @@ func (h *Handlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
     claims := middleware.GetUserFromContext(r)
     if claims == nil {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        sendError(w, http.StatusUnauthorized, "Unauthorized", nil)
         return
     }
 
@@ -46,13 +46,21 @@ func (h *Handlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
     }
 
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        sendError(w, http.StatusBadRequest, "Invalid request body", map[string]string{"decode_error": err.Error()})
         return
     }
 
     var user models.User
     if err := h.db.First(&user, claims.UserID).Error; err != nil {
-        http.Error(w, "User not found", http.StatusNotFound)
+        // Note: The original code returned http.StatusNotFound for any error here.
+        // We'll keep gorm.ErrRecordNotFound specific and a general error for others,
+        // though the prompt implies always StatusNotFound for this specific .First call.
+        // For consistency with GetProfile and specific error handling, we'll differentiate.
+        if err == gorm.ErrRecordNotFound {
+            sendError(w, http.StatusNotFound, "User not found", nil)
+        } else {
+            sendError(w, http.StatusInternalServerError, "Database error while fetching user for update", map[string]string{"original_error": err.Error()})
+        }
         return
     }
 
@@ -62,7 +70,7 @@ func (h *Handlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
     user.Phone = req.Phone
 
     if err := h.db.Save(&user).Error; err != nil {
-        http.Error(w, "Failed to update profile", http.StatusInternalServerError)
+        sendError(w, http.StatusInternalServerError, "Failed to update profile", map[string]string{"save_error": err.Error()})
         return
     }
 

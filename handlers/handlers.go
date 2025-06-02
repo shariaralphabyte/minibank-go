@@ -539,3 +539,42 @@ func (h *Handlers) VerifyUser(w http.ResponseWriter, r *http.Request) {
         "user":    user,
     })
 }
+
+// DebugToken handler retrieves token claims and database user state
+func (h *Handlers) DebugToken(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetUserFromContext(r)
+	if claims == nil {
+		sendError(w, http.StatusUnauthorized, "Invalid or missing token", "No claims found in context, ensure JWT middleware is active and token is valid.")
+		return
+	}
+
+	var user models.User
+	if err := h.db.First(&user, claims.UserID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			sendError(w, http.StatusNotFound, "User not found in database", fmt.Sprintf("User ID %d from token not found in DB.", claims.UserID))
+		} else {
+			sendError(w, http.StatusInternalServerError, "Failed to fetch user from database", err.Error())
+		}
+		return
+	}
+
+	// Clear sensitive information
+	user.Password = ""
+
+	adminStatusMatch := claims.IsAdmin == user.IsAdmin
+
+	response := map[string]interface{}{
+		"token_claims":       claims,
+		"database_user":      user,
+		"admin_status_match": adminStatusMatch,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		// If encoding fails, log it and send a generic server error.
+		// This is a fallback, ideally json.NewEncoder should not fail with map[string]interface{}
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		// Log the actual error server-side e.g., log.Printf("Failed to encode DebugToken response: %v", err)
+	}
+}
